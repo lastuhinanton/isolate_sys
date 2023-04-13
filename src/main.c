@@ -48,3 +48,21 @@ void await_setup(int pipe)
         die("Failed to read from pipe: %m\n");
 }
 
+static int cmd_exec(void *arg)
+{
+    if (prctl(PR_SET_PDEATHSIG, SIGKILL))
+        die("cannot PR_SET_PDEATHSIG for chil process: %m\n");
+
+    struct params *params = (struct params*) arg;
+    await_setup(params->fd[0]);
+
+    char **argv = params->argv;
+    char *cmd = argv[0];
+    printf("===========%s============\n", cmd);
+
+    if (execvp(cmd, argv) == -1)
+        die("Failed to exec %s: %m\n", cmd);
+    
+    die("¯\\_(ツ)_/¯");
+    return 1;
+}
