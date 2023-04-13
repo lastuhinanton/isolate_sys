@@ -17,3 +17,24 @@ static void die(const char *fmt, ...)
     va_end(params);
     exit(1);
 }
+
+struct params
+{
+    int     fd[2];
+    char    **argv;
+}
+
+static void parse_args(int argc, char **argv, struct params *params)
+{
+#define NEXT_ARG() do { argc--; argv++; } while (0);
+    NEXT_ARG();
+
+    if (argc < 1)
+    {
+        printf("Nothing to do!\n");
+        exit(0);
+    }
+    params->argv = argv;
+#undef  NEXT_ARG
+}
+
