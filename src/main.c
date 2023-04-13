@@ -86,6 +86,26 @@ static void write_file(char path[100], char line[100])
         die("Failed to close file %s: %m\n", path);
 }
 
+static void prepare_userns(int pid)
+{
+    char path[100];
+    char line[100];
+
+    int uid = 1000;
+
+    sprintf(path, "/proc/%d/uid_map", pid);
+    sprintf(line, "0 %d 1\n", uid);
+    write_file(path, line);
+
+    sprintf(path, "/proc/%d/setgroups", pid);
+    sprintf(line, "deny");
+    write_file(path, line);
+
+    sprintf(path, "/proc/%d/gid_map", pid);
+    sprintf(line, "0 %d 1\n", uid);
+    write_file(path, line);
+}
+
 int main(int argc, char **argv)
 {
     struct params params;
