@@ -22,20 +22,20 @@ struct params
 {
     int     fd[2];
     char    **argv;
-}
+};
 
 static void parse_args(int argc, char **argv, struct params *params)
 {
-#define NEXT_ARG() do { argc--; argv++; } while (0);
+    #define NEXT_ARG() do { argc--; argv++; } while (0)
     NEXT_ARG();
 
-    if (argc < 1)
-    {
+    if (argc < 1) {
         printf("Nothing to do!\n");
         exit(0);
     }
+
     params->argv = argv;
-#undef  NEXT_ARG
+    #undef NEXT_ARG
 }
 
 #define STACKSIZE (1024*1024)
@@ -65,4 +65,33 @@ static int cmd_exec(void *arg)
     
     die("¯\\_(ツ)_/¯");
     return 1;
+}
+
+int main(int argc, char **argv)
+{
+    struct params params;
+    memset(&params, 0, sizeof(struct params));
+
+    parse_args(argc, argv, &params);
+
+    if (pipe(params.fd) < 0)
+        die("Failed to create pipe: %m");
+    
+    int clone_flags = SIGCHLD | CLONE_NEWUTS;
+    int cmd_pid = clone(cmd_exec, cmd_stack + STACKSIZE, clone_flags, &params);
+
+    if (cmd_pid < 0)
+        die("Failed to clone: %m\n");
+
+    int pipe = params.fd[1];
+
+    if (write(pipe, "OK", 2) != 2)
+        die("Failed to write to pipe: %m");
+    if (close(pipe))
+        die("Failed to close pipe: %m");
+    
+    if (waitpid(cmd_pid, NULL, 0) == -1)
+        die("Failedd to wait pid %d: %m\n", cmd_pid);
+    
+    return 0;
 }
