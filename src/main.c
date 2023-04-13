@@ -102,7 +102,7 @@ static void prepare_userns(int pid)
     write_file(path, line);
 
     sprintf(path, "/proc/%d/gid_map", pid);
-    sprintf(line, "0 %d 1\n", uid);
+    sprintf(line, "0 %d 1\n", uid+1);
     write_file(path, line);
 }
 
