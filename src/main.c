@@ -56,6 +56,11 @@ static int cmd_exec(void *arg)
     struct params *params = (struct params*) arg;
     await_setup(params->fd[0]);
 
+    if (setgid(0) == -1)
+        die("Failed to setgid: %m\n");
+    if (setuid(0) == -1)
+        die("Failed to setuid: %m\n");
+
     char **argv = params->argv;
     char *cmd = argv[0];
     printf("===========%s============\n", cmd);
@@ -67,6 +72,7 @@ static int cmd_exec(void *arg)
     return 1;
 }
 
+
 int main(int argc, char **argv)
 {
     struct params params;
@@ -77,13 +83,15 @@ int main(int argc, char **argv)
     if (pipe(params.fd) < 0)
         die("Failed to create pipe: %m");
     
-    int clone_flags = SIGCHLD | CLONE_NEWUTS;
+    int clone_flags = SIGCHLD | CLONE_NEWUTS | CLONE_NEWUSER;
     int cmd_pid = clone(cmd_exec, cmd_stack + STACKSIZE, clone_flags, &params);
 
     if (cmd_pid < 0)
         die("Failed to clone: %m\n");
 
     int pipe = params.fd[1];
+
+    prepare_userns(cmd_pid);
 
     if (write(pipe, "OK", 2) != 2)
         die("Failed to write to pipe: %m");
