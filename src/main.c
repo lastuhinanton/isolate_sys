@@ -72,6 +72,19 @@ static int cmd_exec(void *arg)
     return 1;
 }
 
+static void write_file(char path[100], char line[100])
+{
+    FILE *f = fopen(path, "w");
+    
+    if (f == NULL)
+        die("Failed to open file %s: %m\n", path);
+    
+    if (fwrite(line, 1, strlen(line), f) < 0)
+        die("Failed to write to file %s:\n", path);
+
+    if (fclose(f) != 0)
+        die("Failed to close file %s: %m\n", path);
+}
 
 int main(int argc, char **argv)
 {
