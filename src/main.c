@@ -38,3 +38,13 @@ static void parse_args(int argc, char **argv, struct params *params)
 #undef  NEXT_ARG
 }
 
+#define STACKSIZE (1024*1024)
+static char cmd_stack[STACKSIZE];
+
+void await_setup(int pipe)
+{
+    char buf[2];
+    if (read(pipe, buf, 2) != 2)
+        die("Failed to read from pipe: %m\n");
+}
+
