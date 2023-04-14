@@ -2,15 +2,14 @@
 
 ## Introduction
 
-Hello, Reader.
 
-In this project i've decided to learn the super intersting process of isolation like it's happening in Docker.
+Hello there,
 
-My jorney has been started from namespaces and the first one was UTS (Unix Time Sharing) namespace and ended by Network namespace. It was an amazing experience because with this project we're able to isolate our system hugelly like in Docker so yeah!, it was great.
+In this project, I have decided to learn the fascinating process of isolation, similar to what occurs in Docker. My journey started with namespaces, beginning with the Unix Time Sharing (UTS) namespace and ending with the Network namespace. It was an amazing experience because this project enabled me to isolate my system significantly, much like in Docker.
 
 ## Using
 
-If you would like to test this programm just do the steps below ( before this just make sure that you have `make` and C-compiler `gcc`):
+If you would like to test this program, follow the steps below (but first, ensure that you have the make utility and C-compiler gcc installed):
 
 1. Clone this repository
 2. Run this command `make`
@@ -23,12 +22,12 @@ Let's try to explore this place and run `ls` command
 
 ![1681476566172](image/README/1681476566172.png)
 
-You see the file root system and it is Alpine isolate OS like in Docker!
+You will see the root system file, which is an isolated Alpine OS similar to Docker!
 
 Let me be honest i'm really exiceted about it!
 
-If you would like to close just run `exit` command in your terminal.
+To exit, simply run the `exit` command in your terminal.
 
 That's it!
 
-Thank you, Reader, for your attention.
+Thank you for your attention, Reader.
