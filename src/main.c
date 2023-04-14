@@ -193,7 +193,7 @@ int main(int argc, char **argv)
     int pipe = params.fd[1];
 
     prepare_userns(cmd_pid);
-    prepare_netns(cmd_pid);
+    // prepare_netns(cmd_pid);
 
     if (write(pipe, "OK", 2) != 2)
         die("Failed to write to pipe: %m");
