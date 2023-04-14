@@ -11,19 +11,11 @@
 #include <memory.h>
 #include <syscall.h>
 #include <errno.h>
+#include "util.h"
+#include "netns.h"
 
 static void prepare_procfs();
 static void prepare_mntns(char *rootfs);
-
-static void die(const char *fmt, ...)
-{
-    va_list params;
-
-    va_start(params, fmt);
-    vfprintf(stderr, fmt, params);
-    va_end(params);
-    exit(1);
-}
 
 struct params
 {
@@ -151,6 +143,37 @@ static void prepare_procfs()
         die("Failed to mount proc: %m\n");
 }
 
+static void prepare_netns(int cmd_pid)
+{
+    char *veth = "veth0";
+    char *vpeer = "veth1";
+    char *veth_addr = "10.1.1.1";
+    char *vpeer_addr = "10.1.1.2";
+    char *netmask = "255.255.255.0";
+
+    int sock_fd = create_socket(
+            PF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
+
+    create_veth(sock_fd, veth, vpeer);
+
+    if_up(veth, veth_addr, netmask);
+
+    int mynetns = get_netns_fd(getpid());
+    int child_netns = get_netns_fd(cmd_pid);
+
+    move_if_to_pid_netns(sock_fd, vpeer, child_netns);
+
+    if (setns(child_netns, CLONE_NEWNET))
+        die("Failed to setns for command at pid %d: %m\n", cmd_pid);
+
+    if_up(vpeer, vpeer_addr, netmask);
+
+    if (setns(mynetns, CLONE_NEWNET))
+        die("Failed to restore previous net namespace: %m\n");
+
+    close(sock_fd);
+}
+
 int main(int argc, char **argv)
 {
     struct params params;
@@ -170,6 +193,7 @@ int main(int argc, char **argv)
     int pipe = params.fd[1];
 
     prepare_userns(cmd_pid);
+    prepare_netns(cmd_pid);
 
     if (write(pipe, "OK", 2) != 2)
         die("Failed to write to pipe: %m");
