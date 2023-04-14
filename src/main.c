@@ -1,12 +1,19 @@
-#define     _GNU_SOURCE
-#include    <stdio.h>
-#include    <sched.h>
-#include    <stdlib.h>
-#include    <stdarg.h>
-#include    <unistd.h>
-#include    <sys/prctl.h>
-#include    <wait.h>
-#include    <memory.h>
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <sched.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <sys/mount.h>
+#include <sys/prctl.h>
+#include <sys/stat.h>
+#include <wait.h>
+#include <memory.h>
+#include <syscall.h>
+#include <errno.h>
+
+static void prepare_procfs();
+static void prepare_mntns(char *rootfs);
 
 static void die(const char *fmt, ...)
 {
@@ -55,6 +62,8 @@ static int cmd_exec(void *arg)
 
     struct params *params = (struct params*) arg;
     await_setup(params->fd[0]);
+
+    prepare_mntns("rootfs");
 
     if (setgid(0) == -1)
         die("Failed to setgid: %m\n");
@@ -106,6 +115,42 @@ static void prepare_userns(int pid)
     write_file(path, line);
 }
 
+static void prepare_mntns(char *rootfs)
+{
+    const char *mnt = rootfs;
+
+    prepare_procfs();
+
+    if (mount(rootfs, mnt, "ext4", MS_BIND, ""))
+        die("Failed to mount %s at %s: %m\n", rootfs, mnt);
+    
+    if (chdir(mnt))
+        die("Failed to chdir to rootfs mounted at %s: %m\n", mnt);
+    
+    const char *put_old = ".put_old";
+    if (mkdir(put_old, 0777) && errno != EEXIST)
+        die("Failed to mkdir put_old %s: %m\n", put_old);
+    
+    if (syscall(SYS_pivot_root, ".", put_old))
+        die("Failed to pivot_root from %s to %s: %m\n", rootfs, put_old);
+
+    if (chdir("/"))
+        die("Failed to chdir to new root: %m\n");
+    
+    prepare_procfs();
+
+    if (umount2(put_old, MNT_DETACH))
+        die("Failed to umount put_old %s: %m\n", put_old);
+}
+
+static void prepare_procfs()
+{
+    if (mkdir("/proc", 0555) && errno != EEXIST)
+        die("Failed to mkdir /proc: %m\n");
+    if (mount("proc", "/proc", "proc", 0, ""))
+        die("Failed to mount proc: %m\n");
+}
+
 int main(int argc, char **argv)
 {
     struct params params;
@@ -116,7 +161,7 @@ int main(int argc, char **argv)
     if (pipe(params.fd) < 0)
         die("Failed to create pipe: %m");
     
-    int clone_flags = SIGCHLD | CLONE_NEWUTS | CLONE_NEWUSER;
+    int clone_flags = SIGCHLD | CLONE_NEWUTS | CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET;
     int cmd_pid = clone(cmd_exec, cmd_stack + STACKSIZE, clone_flags, &params);
 
     if (cmd_pid < 0)
